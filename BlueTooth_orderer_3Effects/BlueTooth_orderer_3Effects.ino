@@ -32,7 +32,6 @@ AudioConnection*         Cord6;
 AudioConnection*         Cord7;
 AudioConnection*         lastCord;
 AudioConnection*         fvDryCord;
-//AudioConnection *cables[16];
 // GUItool: end automatically generated code
 
 void setup() 
@@ -135,30 +134,16 @@ void Orderer() //int numEff
        }
        tft.println("Enter another Effect?");
     }
-    tft.println("Chain Created");
     Connections();
 }
 
 void Connections()
 {
-  // delete wire connections to avoid messing things up
-  delete Cord1;
-  delete Cord2;
-  delete Cord3;
-  delete Cord4;
-  delete Cord5;
-  delete Cord6;
-  delete Cord7;
-  delete lastCord;
-  delete fvDryCord;
+  cleaner();
   
   bool breaker = false;
-  tft.println("in connections");
   for (int i = 0; i <= 9; i++)
   {
-//    tft.print("element is ");
-//    tft.println(EffArr[i]);
-//    char y = EffArr[i];
     
     switch(EffArr[i])
     {
@@ -236,25 +221,33 @@ void Connections()
           }   
         }
         break;
-        
       case 'z': //terminating case
-        switch(EffArr[i-1])
+        if (i == 0)
         {
-          case '1': //flange
-            lastCord = new AudioConnection(flangeBlock, 0, lineOut, 1);
-            tft.println("last connection made");
-            break;
-          case '2': //amp
-            lastCord = new AudioConnection(ampBlock, 0, lineOut, 1);
-            tft.println("last connection made");
-            break;
-          case '3': //freeverb
-            lastCord = new AudioConnection(mixFVOut, 0, lineOut, 1);
-            tft.println("last connection made");
-            break;
+          breaker = true;
+          tft.println("Creation cancelled");
+          break;
         }
-        breaker = true;
-        break;
+        else
+        {
+          switch(EffArr[i-1])
+          {
+            case '1': //flange
+              lastCord = new AudioConnection(flangeBlock, 0, lineOut, 1);
+              tft.println("last connection made");
+              break;
+            case '2': //amp
+              lastCord = new AudioConnection(ampBlock, 0, lineOut, 1);
+              tft.println("last connection made");
+              break;
+            case '3': //freeverb
+              lastCord = new AudioConnection(mixFVOut, 0, lineOut, 1);
+              tft.println("last connection made");
+              break;
+           }
+           breaker = true;
+           break;
+        }
     }
     if (breaker == true) //if the terminating character has been reached, just break out of the loop
     {
@@ -262,4 +255,17 @@ void Connections()
     }
   }
   tft.println("done with connections");
+}
+
+void cleaner()
+{
+  delete Cord1;
+  delete Cord2;
+  delete Cord3;
+  delete Cord4;
+  delete Cord5;
+  delete Cord6;
+  delete Cord7;
+  delete lastCord;
+  delete fvDryCord; 
 }
