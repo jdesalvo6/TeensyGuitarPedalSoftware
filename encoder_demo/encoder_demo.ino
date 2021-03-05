@@ -1,5 +1,3 @@
-#include <Bounce.h>
-
 #define PIN_ENCODER_R 2
 #define PIN_ENCODER_L 3
 #define PIN_ENCODER_PUSH 33
