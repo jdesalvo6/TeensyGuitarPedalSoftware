@@ -14,6 +14,12 @@
 #define TFT_MISO    12
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MISO);
 
+#define PIN_ENCODER_R 2
+#define PIN_ENCODER_L 3
+#define PIN_ENCODER_PUSH 33
+
+float ampGain = 15;
+
 // GUItool: begin automatically generated code
 AudioControlSGTL5000     sgtl5000_1;     //xy=264.0056838989258,526.0000190734863
 AudioInputI2S            lineIn;         //xy=55,303.9999704360962
@@ -36,7 +42,6 @@ AudioConnection*         fvDryCord;
 
 void setup() 
 {
-  
   // generic setup
   Serial1.begin(9600); //rx1 and tx1 = pins 0 and 1 on Teensy for BT
   Serial.begin(9600);
@@ -47,6 +52,13 @@ void setup()
   tft.setFont(Arial_16);
   delay(250);
   AudioMemory(524);
+
+  //encoder setup
+  pinMode(PIN_ENCODER_L, INPUT_PULLUP);
+  pinMode(PIN_ENCODER_R, INPUT_PULLUP);
+  pinMode(PIN_ENCODER_PUSH, INPUT_PULLUP);
+  digitalWrite(PIN_ENCODER_L, HIGH);
+  digitalWrite(PIN_ENCODER_R, HIGH);
   
   // setup SGTL5000
   sgtl5000_1.enable();
@@ -61,7 +73,7 @@ void setup()
   flangeBlock.voices((5*AUDIO_BLOCK_SAMPLES)/4, (5*AUDIO_BLOCK_SAMPLES)/4, 1);
 
   // Amp setup
-  ampBlock.gain(15);
+  ampBlock.gain(ampGain);
 
   // freeverb setup
   mixFVOut.gain(0, 0.9); // hear 90% "wet"
@@ -96,6 +108,10 @@ void loop()
       {
         tft.fillScreen(ILI9341_BLACK);
         tft.setCursor(0, 8);
+      }
+      else if (inChar == '3')
+      {
+        effectEditor();
       }
    }
  }
@@ -268,4 +284,79 @@ void cleaner()
   delete Cord7;
   delete lastCord;
   delete fvDryCord; 
+  ampGain = 15;
+}
+
+void effectEditor()
+{
+  tft.println("Which effect do you want to change");
+  char rc;
+  char param; //the param that you are changing
+
+  while (Serial1.available()==0) {}
+  rc = Serial1.read();
+  if (rc == '1')
+  {
+    //do stuff for flange, at this point probably have to select what you want changed
+  }
+  else if (rc == '2')
+  {
+    //do stuff for amp, only has 1 param (volume) for now
+    while (Serial1.available()==0) {}
+    param = Serial1.read();
+    paramChanger(rc, param);
+  }
+  else if (rc == '3')
+  {
+    //do stuff for reverb, select which param you are changing
+  }
+  else if (rc == 'z')
+  {
+    tft.println("Effect paramenter change cancelled.");
+  }
+}
+
+void paramChanger(char eff, char param)
+{
+  bool looper = true;
+  if (eff == '1')
+  {
+    
+  }
+  else if (eff == '2')
+  {
+    tft.println("editing amp effect.");
+    if (param == '1')
+    {
+      while(looper) //loop so the user can keep changing the effect
+      {
+        if (digitalRead(PIN_ENCODER_L) == LOW)
+        {
+          Serial.println("left");
+          ampGain = ampGain - 0.5;
+          Serial.println(ampGain);
+          ampBlock.gain(ampGain);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_R) == LOW)
+        {
+          Serial.println("right");
+          ampGain = ampGain + 0.5;
+          Serial.println(ampGain);
+          ampBlock.gain(ampGain);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_PUSH) == LOW)
+        {
+          looper = false;
+          delay(300);
+        }
+      }
+    }
+  }
+  else if (eff == '3')
+  {
+    
+  }
+  tft.println("done editing params.");
 }
