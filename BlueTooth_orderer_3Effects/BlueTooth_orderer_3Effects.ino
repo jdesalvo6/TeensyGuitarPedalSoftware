@@ -17,17 +17,23 @@ ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MIS
 #define PIN_ENCODER_R 2
 #define PIN_ENCODER_L 3
 #define PIN_ENCODER_PUSH 33
+#define FLANGE_DELAY_LENGTH (5*AUDIO_BLOCK_SAMPLES)
 
 float ampGain = 15;
+float flangeOffset = FLANGE_DELAY_LENGTH/4;
+float flangeDepth = FLANGE_DELAY_LENGTH/4;
+float maxDepth = 165;
+float flangeModFreq = 1;
+float maxFreq = 3.5;
 
 // GUItool: begin automatically generated code
-AudioControlSGTL5000     sgtl5000_1;     //xy=264.0056838989258,526.0000190734863
-AudioInputI2S            lineIn;         //xy=55,303.9999704360962
-AudioEffectFreeverb      freeverbBlock;      //xy=378.005615234375,364.914758682251
-AudioEffectFlange        flangeBlock;        //xy=493.0056381225586,249.91472816467285
-AudioAmplifier           ampBlock;           //xy=505.0056610107422,178.00565910339355
-AudioMixer4              mixFVOut;         //xy=588.0055847167969,342.0055179595947
-AudioOutputI2S           lineOut;        //xy=1031.0056114196777,313.99991607666016
+AudioControlSGTL5000     sgtl5000_1;     
+AudioInputI2S            lineIn;        
+AudioEffectFreeverb      freeverbBlock;      
+AudioEffectFlange        flangeBlock;        
+AudioAmplifier           ampBlock;          
+AudioMixer4              mixFVOut;         
+AudioOutputI2S           lineOut;        
 AudioConnection          fvMixCord(freeverbBlock, 0, mixFVOut, 1);
 AudioConnection*         Cord1;
 AudioConnection*         Cord2;
@@ -68,9 +74,8 @@ void setup()
   sgtl5000_1.unmuteLineout();
 
   // flange setup
-  short delayline[5*AUDIO_BLOCK_SAMPLES];   
-  flangeBlock.begin(delayline, 5*AUDIO_BLOCK_SAMPLES, (5*AUDIO_BLOCK_SAMPLES)/4, (5*AUDIO_BLOCK_SAMPLES)/4, 1);
-  flangeBlock.voices((5*AUDIO_BLOCK_SAMPLES)/4, (5*AUDIO_BLOCK_SAMPLES)/4, 1);
+  short delayline[FLANGE_DELAY_LENGTH];   
+  flangeBlock.begin(delayline, FLANGE_DELAY_LENGTH, flangeOffset, flangeDepth, flangeModFreq);
 
   // Amp setup
   ampBlock.gain(ampGain);
@@ -81,7 +86,7 @@ void setup()
   freeverbBlock.roomsize(0.6);
   freeverbBlock.damping(0.4);
 
-  tft.println("We're getting there!");
+  tft.println("3 Effect Pedal Demo");
 }
 
 int activeEffect;
@@ -285,6 +290,11 @@ void cleaner()
   delete lastCord;
   delete fvDryCord; 
   ampGain = 15;
+  flangeOffset = FLANGE_DELAY_LENGTH/4;
+  flangeDepth = FLANGE_DELAY_LENGTH/4;
+  flangeModFreq = 1;
+  flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+  ampBlock.gain(ampGain);
 }
 
 void effectEditor()
@@ -298,6 +308,9 @@ void effectEditor()
   if (rc == '1')
   {
     //do stuff for flange, at this point probably have to select what you want changed
+    while (Serial1.available()==0) {}
+    param = Serial1.read();
+    paramChanger(rc, param);
   }
   else if (rc == '2')
   {
@@ -321,7 +334,91 @@ void paramChanger(char eff, char param)
   bool looper = true;
   if (eff == '1')
   {
-    
+    tft.println("editing flange effect.");
+    if (param == '1') //this one doesn't sound like it affects it that much. maybe just take it out
+    {
+      Serial.println("flangeOffset");
+      while(looper)
+      {
+        if (digitalRead(PIN_ENCODER_L) == LOW)
+        {
+          Serial.println("left");
+          flangeOffset = flangeOffset - 10;
+          Serial.println(flangeOffset);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_R) == LOW)
+        {
+          Serial.println("right");
+          flangeOffset = flangeOffset + 10;
+          Serial.println(flangeOffset);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_PUSH) == LOW)
+        {
+          looper = false;
+          delay(300);
+        }
+      }
+    }
+    else if (param == '2')
+    {
+      Serial.println("flangeDepth");
+      while(looper)
+      {
+        if (digitalRead(PIN_ENCODER_L) == LOW && flangeDepth > 0)
+        {
+          Serial.println("left");
+          flangeDepth = flangeDepth - 10;
+          Serial.println(flangeDepth);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_R) == LOW && flangeDepth < maxDepth)
+        {
+          Serial.println("right");
+          flangeDepth = flangeDepth + 10;
+          Serial.println(flangeDepth);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_PUSH) == LOW)
+        {
+          looper = false;
+          delay(300);
+        }
+      }
+    }
+    else if (param == '3')
+    {
+      Serial.println("freqMod");
+      while(looper)
+      {
+        if (digitalRead(PIN_ENCODER_L) == LOW && flangeModFreq > 0.1)
+        {
+          Serial.println("left");
+          flangeModFreq = flangeModFreq - 0.1;
+          Serial.println(flangeModFreq);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_R) == LOW && flangeModFreq < maxFreq)
+        {
+          Serial.println("right");
+          flangeModFreq = flangeModFreq + 0.1;
+          Serial.println(flangeModFreq);
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
+          delay(75);
+        }
+        if (digitalRead(PIN_ENCODER_PUSH) == LOW)
+        {
+          looper = false;
+          delay(300);
+        }
+      }
+    }
   }
   else if (eff == '2')
   {
@@ -333,7 +430,7 @@ void paramChanger(char eff, char param)
         if (digitalRead(PIN_ENCODER_L) == LOW)
         {
           Serial.println("left");
-          ampGain = ampGain - 0.5;
+          ampGain = ampGain - 5;
           Serial.println(ampGain);
           ampBlock.gain(ampGain);
           delay(75);
@@ -341,7 +438,7 @@ void paramChanger(char eff, char param)
         if (digitalRead(PIN_ENCODER_R) == LOW)
         {
           Serial.println("right");
-          ampGain = ampGain + 0.5;
+          ampGain = ampGain + 5;
           Serial.println(ampGain);
           ampBlock.gain(ampGain);
           delay(75);
