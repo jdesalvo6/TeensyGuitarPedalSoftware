@@ -21,6 +21,7 @@ ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MIS
 #define PIN_ENCODER_PUSH 33
 #define VOL_ENC_L 28
 #define VOL_ENC_R 29
+#define VOL_ENC_PUSH 99 //set this pin to a real value next time when working with the board
 
 // startup settings for the effects
 #define FLANGE_DELAY_LENGTH (3*AUDIO_BLOCK_SAMPLES)
@@ -66,7 +67,7 @@ AudioConnection          flangeOutCord(flangeBlock, 0, outMix, 2);
 AudioConnection          fvOutCord(mixFVOut, 0, outMix, 0);
 AudioConnection          distOutCord(ampBlock, 0, outMix, 1);
 AudioConnection          outputCord(outMix, 0, lineOut, 1);     
-//AudioConnection          bypassCord(lineIn, 1, outMix, 3); //use this for bypass
+AudioConnection          bypassCord(lineIn, 1, outMix, 3); //use this for bypass
 // GUItool: end automatically generated code
 
 void setup() 
@@ -96,6 +97,7 @@ void setup()
   digitalWrite(PIN_ENCODER_R, HIGH);
   pinMode(VOL_ENC_L, INPUT_PULLUP);
   pinMode(VOL_ENC_R, INPUT_PULLUP);
+  pinMode(VOL_ENC_PUSH, INPUT_PULLUP);
   digitalWrite(VOL_ENC_L, HIGH);
   digitalWrite(VOL_ENC_R, HIGH);
   
@@ -127,6 +129,19 @@ void loop()
 {
   MasterVol();
   BTCommandCheck();
+  Bypass();
+}
+
+void Bypass() //disconnect all effects and just connect the dry in/out cord
+{
+   if (digitalRead(VOL_ENC_PUSH) == LOW)
+   {
+     flangeOutCord.disconnect();
+     fvOutCord.disconnect();
+     distOutCord.disconnect();
+     bypassCord.connect();
+   }
+  
 }
 
 void MasterVol()
@@ -214,7 +229,7 @@ void Selector() //int numEff
 
 void Connections()
 {
-  
+  bypassCord.disconnect();
   bool breaker = false;
   for (int i = 0; i <= 9; i++)
   {
@@ -344,7 +359,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           flangeOffset = flangeOffset - 10;
           Serial.println(flangeOffset);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW)
@@ -352,11 +366,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           flangeOffset = flangeOffset + 10;
           Serial.println(flangeOffset);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           looper = false;
           delay(300);
         }
@@ -372,7 +386,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           flangeDepth = flangeDepth - 10;
           Serial.println(flangeDepth);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && flangeDepth < maxDepth)
@@ -380,11 +393,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           flangeDepth = flangeDepth + 10;
           Serial.println(flangeDepth);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           looper = false;
           delay(300);
         }
@@ -400,7 +413,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           flangeModFreq = flangeModFreq - 0.1;
           Serial.println(flangeModFreq);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && flangeModFreq < maxFreq)
@@ -408,11 +420,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           flangeModFreq = flangeModFreq + 0.1;
           Serial.println(flangeModFreq);
-          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          flangeBlock.voices(flangeOffset, flangeDepth, flangeModFreq);
           looper = false;
           delay(300);
         }
@@ -431,7 +443,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           ampGain = ampGain - 5;
           Serial.println(ampGain);
-          ampBlock.gain(ampGain);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW)
@@ -439,11 +450,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           ampGain = ampGain + 5;
           Serial.println(ampGain);
-          ampBlock.gain(ampGain);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          ampBlock.gain(ampGain);
           looper = false;
           delay(300);
         }
@@ -462,7 +473,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           fvDry = fvDry - 0.05;
           Serial.println(fvDry);
-          mixFVOut.gain(1, fvDry);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && fvDry <= 1)
@@ -470,11 +480,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           fvDry = fvDry + 0.05;
           Serial.println(fvDry);
-          mixFVOut.gain(1, fvDry);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          mixFVOut.gain(1, fvDry);
           looper = false;
           delay(300);
         }
@@ -489,7 +499,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           fvWet = fvWet - 0.05;
           Serial.println(fvWet);
-          mixFVOut.gain(0, fvWet);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && fvWet <= 1)
@@ -497,11 +506,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           fvWet = fvWet + 0.05;
           Serial.println(fvWet);
-          mixFVOut.gain(0, fvWet);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          mixFVOut.gain(0, fvWet);
           looper = false;
           delay(300);
         }
@@ -516,7 +525,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           fvRoomSize = fvRoomSize - 0.05;
           Serial.println(fvRoomSize);
-          freeverbBlock.roomsize(fvRoomSize);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && fvWet <= 1)
@@ -524,11 +532,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           fvRoomSize = fvRoomSize + 0.05;
           Serial.println(fvRoomSize);
-          freeverbBlock.roomsize(fvRoomSize);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          freeverbBlock.roomsize(fvRoomSize);
           looper = false;
           delay(300);
         }
@@ -543,7 +551,6 @@ void paramChanger(char eff, char param)
           Serial.println("left");
           fvDamp = fvDamp - 0.05;
           Serial.println(fvDamp);
-          freeverbBlock.damping(fvDamp);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_R) == LOW && fvWet <= 1)
@@ -551,11 +558,11 @@ void paramChanger(char eff, char param)
           Serial.println("right");
           fvDamp = fvDamp + 0.05;
           Serial.println(fvDamp);
-          freeverbBlock.damping(fvDamp);
           delay(75);
         }
         if (digitalRead(PIN_ENCODER_PUSH) == LOW)
         {
+          freeverbBlock.damping(fvDamp);
           looper = false;
           delay(300);
         }
