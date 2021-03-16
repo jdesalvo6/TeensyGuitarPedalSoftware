@@ -122,7 +122,7 @@ void setup()
   freeverbBlock.roomsize(fvRoomSize);
   freeverbBlock.damping(fvDamp);
 
-  tft.println("3 Effect Demo - Backupzz");
+  tft.println("3Effect 3-16");
 }
 
 void loop() 
@@ -140,6 +140,9 @@ void Bypass() //disconnect all effects and just connect the dry in/out cord
      fvOutCord.disconnect();
      distOutCord.disconnect();
      bypassCord.connect();
+     bool fvOn = false;
+     bool distOn = false;
+     bool flangeOn = false;
    }
   
 }
@@ -331,10 +334,8 @@ void effectEditor()
   else if (rc == '3')
   {
     //do stuff for reverb, select which param you are changing
-    tft.print("heyo");
     while (Serial1.available()==0) {}
     param = Serial1.read();
-    tft.print("heyo2");
     paramChanger(rc, param);
   }
   else if (rc == 'z')
