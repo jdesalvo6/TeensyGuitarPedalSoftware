@@ -25,22 +25,23 @@ ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MIS
 
 // startup settings for the effects
 #define FLANGE_DELAY_LENGTH (4*AUDIO_BLOCK_SAMPLES)
-float ampGain = 30;
 float flangeOffset = FLANGE_DELAY_LENGTH/4;
 float flangeDepth = FLANGE_DELAY_LENGTH/4;
-float maxDepth = 165;
 float flangeModFreq = 1;
-float maxFreq = 3.5;
-float masterVol = 0.8;
+float ampGain = 30;
 float fvDry = 0.4;
 float fvWet = 0.9;
 float fvRoomSize = 0.6;
 float fvDamp = 0.4;
+float maxDepth = 165;
+float maxFreq = 3.5;
+float masterVol = 0.8;
 
 //setting on/off logic
 bool fvOn = false;
 bool distOn = false;
 bool flangeOn = false;
+bool bypassOn = false;
 int activeEff = 0;
 
 //initialization for the effect user input array
@@ -49,10 +50,16 @@ const byte numChars = 10;
 char EffArr[numChars];
 int numEff;
 
-//save states
+//save states and their info
 char save1[numChars];
 char save2[numChars];
 char save3[numChars];
+float paramsSave1[8] = {flangeOffset, flangeDepth, flangeModFreq, ampGain, 
+                       fvDry, fvWet, fvRoomSize, fvDamp};
+float paramsSave2[8] = {flangeOffset, flangeDepth, flangeModFreq, ampGain, 
+                       fvDry, fvWet, fvRoomSize, fvDamp};
+float paramsSave3[8] = {flangeOffset, flangeDepth, flangeModFreq, ampGain, 
+                       fvDry, fvWet, fvRoomSize, fvDamp};
 
 // GUItool: begin automatically generated code
 AudioControlSGTL5000     sgtl5000_1;
@@ -91,8 +98,8 @@ void setup()
   //disconnect effects at first
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
-  distOutCord.disconnect();
-  //bypassCord.disconnect();
+  //distOutCord.disconnect(); //leave distortion on as default
+  bypassCord.disconnect();
 
   //encoder setup
   pinMode(PIN_ENCODER_L, INPUT_PULLUP);
@@ -127,7 +134,7 @@ void setup()
   freeverbBlock.roomsize(fvRoomSize);
   freeverbBlock.damping(fvDamp);
 
-  tft.println("3Effect 3-16");
+  tft.println("3Effect 3-18");
 }
 
 void loop() 
@@ -141,15 +148,32 @@ void Bypass() //disconnect all effects and just connect the dry in/out cord
 {
    if (digitalRead(VOL_ENC_PUSH) == LOW)
    {
-     flangeOutCord.disconnect();
-     fvOutCord.disconnect();
-     distOutCord.disconnect();
-     bypassCord.connect();
-     bool fvOn = false;
-     bool distOn = false;
-     bool flangeOn = false;
+      if (bypassOn == false) //off and turning it on
+      {
+        flangeOutCord.disconnect();
+        fvOutCord.disconnect();
+        distOutCord.disconnect();
+        bypassCord.connect();
+        bypassOn = true;
+      }
    }
-  
+   else //off and turning on
+   {
+     bypassCord.disconnect();
+     bypassOn = false;
+     if (fvOn == true)
+     {
+       fvOutCord.connect();
+     }
+     if (distOn == true)
+     {
+       distOutCord.connect();
+     }
+     if (flangeOn == true)
+     {
+       flangeOutCord.connect();
+     }
+   }
 }
 
 void MasterVol()
@@ -245,7 +269,6 @@ void Selector() //int numEff
 
 void Connections()
 {
-  bypassCord.disconnect();
   bool breaker = false;
   for (int i = 0; i <= 9; i++)
   {
@@ -253,7 +276,7 @@ void Connections()
     switch(EffArr[i])
     {
       case '1': //let 1 be flange
-        if (!flangeOn)//off turning on
+        if (flangeOn == false)//off turning on
         {
           tft.println("Flange on");
           flangeOutCord.connect();
@@ -269,7 +292,7 @@ void Connections()
         }
         break;
       case '2': //let 2 be amp
-        if (!distOn) //off  turning on
+        if (distOn == false) //off  turning on
         {
           tft.println("distortion on");
           distOutCord.connect();
@@ -286,7 +309,7 @@ void Connections()
         break;
       case '3': //let 3 be freeverb
         //code here
-        if (!fvOn) //off  turning on
+        if (fvOn == false) //off  turning on
         {
           tft.println("reverb on");
           fvOutCord.connect();
@@ -590,13 +613,21 @@ void saveState()
 {
   tft.println("Which save state");
   while (Serial1.available()==0) {}
-  char rc = Serial1.read();
+  char rc = Serial1.read(); //determines which save state
   if (rc == '1')
   {
     for (int i; i <10; i++)
     {
       save1[i] = EffArr[i];
     }
+    paramsSave1[0] = flangeOffset;
+    paramsSave1[1] = flangeDepth;
+    paramsSave1[2] = flangeModFreq; 
+    paramsSave1[3] = ampGain;
+    paramsSave1[4] = fvDry; 
+    paramsSave1[5] = fvWet;
+    paramsSave1[6] = fvRoomSize;
+    paramsSave1[7] = fvDamp;
     tft.println("saved to 1");
   }
   else if (rc == '2')
@@ -605,6 +636,14 @@ void saveState()
     {
       save2[i] = EffArr[i];
     }
+    paramsSave2[0] = flangeOffset;
+    paramsSave2[1] = flangeDepth;
+    paramsSave2[2] = flangeModFreq; 
+    paramsSave2[3] = ampGain;
+    paramsSave2[4] = fvDry; 
+    paramsSave2[5] = fvWet;
+    paramsSave2[6] = fvRoomSize;
+    paramsSave2[7] = fvDamp;
     tft.println("saved to 2");
   }
   else if (rc == '3')
@@ -613,6 +652,14 @@ void saveState()
     {
       save3[i] = EffArr[i];
     }
+    paramsSave3[0] = flangeOffset;
+    paramsSave3[1] = flangeDepth;
+    paramsSave3[2] = flangeModFreq; 
+    paramsSave3[3] = ampGain;
+    paramsSave3[4] = fvDry; 
+    paramsSave3[5] = fvWet;
+    paramsSave3[6] = fvRoomSize;
+    paramsSave3[7] = fvDamp;
     tft.println("saved to 3");
   }
 }
@@ -620,9 +667,9 @@ void saveState()
 void saveLoader()
 {
   //these few commands are to disconnect all effects and reset their status
-  bool fvOn = false;
-  bool distOn = false;
-  bool flangeOn = false;
+  fvOn = false;
+  distOn = false;
+  flangeOn = false;
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
   distOutCord.disconnect();
@@ -637,6 +684,12 @@ void saveLoader()
     {
       EffArr[i] = save1[i];
     }
+    flangeBlock.voices(paramsSave1[0], paramsSave1[1], paramsSave1[2]);
+    ampBlock.gain(paramsSave1[3]);
+    mixFVOut.gain(1, paramsSave1[4]);
+    mixFVOut.gain(0, paramsSave1[5]);
+    freeverbBlock.roomsize(paramsSave1[6]);
+    freeverbBlock.damping(paramsSave1[7]);
     tft.println("loaded 1");
   }
   else if (rc == '2')
@@ -645,6 +698,12 @@ void saveLoader()
     {
       EffArr[i] = save1[i];
     }
+    flangeBlock.voices(paramsSave2[0], paramsSave2[1], paramsSave2[2]);
+    ampBlock.gain(paramsSave2[3]);
+    mixFVOut.gain(1, paramsSave2[4]);
+    mixFVOut.gain(0, paramsSave2[5]);
+    freeverbBlock.roomsize(paramsSave2[6]);
+    freeverbBlock.damping(paramsSave2[7]);
     tft.println("loaded 2");
   }
   else if (rc == '3')
@@ -653,6 +712,12 @@ void saveLoader()
     {
       EffArr[i] = save1[i];
     }
+    flangeBlock.voices(paramsSave3[0], paramsSave3[1], paramsSave3[2]);
+    ampBlock.gain(paramsSave3[3]);
+    mixFVOut.gain(1, paramsSave3[4]);
+    mixFVOut.gain(0, paramsSave3[5]);
+    freeverbBlock.roomsize(paramsSave3[6]);
+    freeverbBlock.damping(paramsSave3[7]);
     tft.println("loaded 3");
   }
   Connections();
