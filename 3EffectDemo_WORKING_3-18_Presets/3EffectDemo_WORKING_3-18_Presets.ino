@@ -44,16 +44,11 @@ bool flangeOn = false;
 bool bypassOn = false;
 int activeEff = 0;
 
-//initialization for the effect user input array
-int activeEffect;
-const byte numChars = 10;
-char EffArr[numChars];
-int numEff;
-
 //save states and their info
-char save1[numChars];
-char save2[numChars];
-char save3[numChars];
+char currentEffect;
+bool save1[3] = { false };
+bool save2[3] = { false };
+bool save3[3] = { false };
 float paramsSave1[8] = {flangeOffset, flangeDepth, flangeModFreq, ampGain, 
                        fvDry, fvWet, fvRoomSize, fvDamp};
 float paramsSave2[8] = {flangeOffset, flangeDepth, flangeModFreq, ampGain, 
@@ -98,8 +93,8 @@ void setup()
   //disconnect effects at first
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
-  //distOutCord.disconnect(); //leave distortion on as default
-  bypassCord.disconnect();
+  distOutCord.disconnect(); //leave distortion on as default
+  //bypassCord.disconnect();
 
   //encoder setup
   pinMode(PIN_ENCODER_L, INPUT_PULLUP);
@@ -134,7 +129,7 @@ void setup()
   freeverbBlock.roomsize(fvRoomSize);
   freeverbBlock.damping(fvDamp);
 
-  tft.println("3Effect 3-18");
+  tft.println("3EffectDemo 3-28");
 }
 
 void loop() 
@@ -150,29 +145,33 @@ void Bypass() //disconnect all effects and just connect the dry in/out cord
    {
       if (bypassOn == false) //off and turning it on
       {
+        tft.println("bypass on");
         flangeOutCord.disconnect();
         fvOutCord.disconnect();
         distOutCord.disconnect();
         bypassCord.connect();
+        delay(300);
         bypassOn = true;
       }
-   }
-   else //off and turning on
-   {
-     bypassCord.disconnect();
-     bypassOn = false;
-     if (fvOn == true)
-     {
-       fvOutCord.connect();
-     }
-     if (distOn == true)
-     {
-       distOutCord.connect();
-     }
-     if (flangeOn == true)
-     {
-       flangeOutCord.connect();
-     }
+      else
+      {
+        tft.println("bypass off");
+        bypassCord.disconnect();
+        bypassOn = false;
+        if (fvOn == true)
+        {
+          fvOutCord.connect();
+        }
+        if (distOn == true)
+        {
+          distOutCord.connect();
+        }
+        if (flangeOn == true)
+        {
+          flangeOutCord.connect();
+        }
+        delay(300);
+      }
    }
 }
 
@@ -208,7 +207,7 @@ void BTCommandCheck()
    {
       if (inChar == '1')
       {
-        Selector(); //was orderer
+        Connections();
       }
       else if (inChar == '2')
       {
@@ -231,49 +230,14 @@ void BTCommandCheck()
  }
 }
 
-void Selector() //int numEff
-{
-    // loop variable initialization
-    static byte ndx = 0;
-    char endMarker = 'z';
-    char rc;
-    int cnt = 0;
-    numEff = 0;
-
-    tft.println("Enter Effects to toggle"); //the logic behind the loop is that the user can enter up to 10 effects MAX.
-    // when the user sends a 'z' it is like they are hitting 'done' in the app
-    while (cnt <= 10)
-    {
-       while (Serial1.available()==0) {}
-       rc = Serial1.read();
-       if (rc != endMarker) 
-       {
-          EffArr[ndx] = rc;
-          ndx++;
-          cnt++;
-       }
-       else if (rc == 'z') 
-       {
-          EffArr[ndx] = 'z'; // terminate the string
-          numEff = cnt;
-          tft.print("numEff = ");
-          tft.println(numEff);
-          ndx = 0;
-          cnt = 0;
-          break;
-       }
-       tft.println("Enter another Effect?");
-    }
-    Connections();
-}
-
 void Connections()
 {
-  bool breaker = false;
-  for (int i = 0; i <= 9; i++)
-  {
+    tft.println("Enter Effect to toggle"); //the logic behind the loop is that the user can enter up to 10 effects MAX.
+    // when the user sends a 'z' it is like they are hitting 'done' in the app
+    while (Serial1.available()==0) {}
+    currentEffect = Serial1.read();
     
-    switch(EffArr[i])
+    switch(currentEffect)
     {
       case '1': //let 1 be flange
         if (flangeOn == false)//off turning on
@@ -281,14 +245,12 @@ void Connections()
           tft.println("Flange on");
           flangeOutCord.connect();
           flangeOn = true;
-          activeEff = activeEff + 1;
         }
         else //on turning off
         {
           tft.println("Flange off");
           flangeOutCord.disconnect();
           flangeOn = false;
-          activeEff = activeEff - 1;
         }
         break;
       case '2': //let 2 be amp
@@ -297,14 +259,12 @@ void Connections()
           tft.println("distortion on");
           distOutCord.connect();
           distOn = true;
-          activeEff = activeEff + 1;
         }
         else //on  turning off
         {
           tft.println("distortion off");
           distOutCord.disconnect();
           distOn = false;
-          activeEff = activeEff - 1;
         }
         break;
       case '3': //let 3 be freeverb
@@ -314,35 +274,19 @@ void Connections()
           tft.println("reverb on");
           fvOutCord.connect();
           fvOn = true;
-          activeEff = activeEff + 1;
         }
         else //on  turning off
         {
           tft.println("reverb off");
           fvOutCord.disconnect();
           fvOn = false;
-          activeEff = activeEff - 1;
         }
         break;
       case 'z': //terminating case
-        if (i == 0)
-        {
-          breaker = true;
           tft.println("Creation cancelled");
           break;
-        }
-        else
-        {
-          breaker = true;
-          tft.println("finished toggling");
-        }
     }
-    if (breaker == true) //if the terminating character has been reached, just break out of the loop
-    {
-      break;
-    }
-  }
-  tft.println("done with connections");
+  tft.println("done with toggling");
 }
 
 void effectEditor()
@@ -616,10 +560,10 @@ void saveState()
   char rc = Serial1.read(); //determines which save state
   if (rc == '1')
   {
-    for (int i; i <10; i++)
-    {
-      save1[i] = EffArr[i];
-    }
+    save1[0] = flangeOn;
+    save1[1] = distOn;
+    save1[2] = fvOn;
+    
     paramsSave1[0] = flangeOffset;
     paramsSave1[1] = flangeDepth;
     paramsSave1[2] = flangeModFreq; 
@@ -632,10 +576,10 @@ void saveState()
   }
   else if (rc == '2')
   {
-    for (int i; i <10; i++)
-    {
-      save2[i] = EffArr[i];
-    }
+    save2[0] = flangeOn;
+    save2[1] = distOn;
+    save2[2] = fvOn;
+    
     paramsSave2[0] = flangeOffset;
     paramsSave2[1] = flangeDepth;
     paramsSave2[2] = flangeModFreq; 
@@ -648,10 +592,10 @@ void saveState()
   }
   else if (rc == '3')
   {
-    for (int i; i <10; i++)
-    {
-      save3[i] = EffArr[i];
-    }
+    save3[0] = flangeOn;
+    save3[1] = distOn;
+    save3[2] = fvOn;
+    
     paramsSave3[0] = flangeOffset;
     paramsSave3[1] = flangeDepth;
     paramsSave3[2] = flangeModFreq; 
@@ -667,9 +611,6 @@ void saveState()
 void saveLoader()
 {
   //these few commands are to disconnect all effects and reset their status
-  fvOn = false;
-  distOn = false;
-  flangeOn = false;
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
   distOutCord.disconnect();
@@ -680,9 +621,17 @@ void saveLoader()
   char rc = Serial1.read();
   if (rc == '1')
   {
-    for (int i; i <10; i++)
+    if (save1[0] == true)
     {
-      EffArr[i] = save1[i];
+      flangeOutCord.connect();
+    }
+    if (save1[1] == true)
+    {
+      distOutCord.connect();
+    }
+    if (save1[2] == true)
+    {
+      fvOutCord.connect();
     }
     flangeBlock.voices(paramsSave1[0], paramsSave1[1], paramsSave1[2]);
     ampBlock.gain(paramsSave1[3]);
@@ -694,9 +643,17 @@ void saveLoader()
   }
   else if (rc == '2')
   {
-    for (int i; i <10; i++)
+    if (save2[0] == true)
     {
-      EffArr[i] = save1[i];
+      flangeOutCord.connect();
+    }
+    if (save2[1] == true)
+    {
+      distOutCord.connect();
+    }
+    if (save2[2] == true)
+    {
+      fvOutCord.connect();
     }
     flangeBlock.voices(paramsSave2[0], paramsSave2[1], paramsSave2[2]);
     ampBlock.gain(paramsSave2[3]);
@@ -708,9 +665,17 @@ void saveLoader()
   }
   else if (rc == '3')
   {
-    for (int i; i <10; i++)
+    if (save3[0] == true)
     {
-      EffArr[i] = save1[i];
+      flangeOutCord.connect();
+    }
+    if (save3[1] == true)
+    {
+      distOutCord.connect();
+    }
+    if (save3[2] == true)
+    {
+      fvOutCord.connect();
     }
     flangeBlock.voices(paramsSave3[0], paramsSave3[1], paramsSave3[2]);
     ampBlock.gain(paramsSave3[3]);
@@ -720,5 +685,4 @@ void saveLoader()
     freeverbBlock.damping(paramsSave3[7]);
     tft.println("loaded 3");
   }
-  Connections();
 }
