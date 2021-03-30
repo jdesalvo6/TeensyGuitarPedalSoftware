@@ -16,7 +16,7 @@
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MISO);
 
 //rotary encoder defines
-#define PIN_ENCODER_R 2
+#define PIN_ENCODER_R 5
 #define PIN_ENCODER_L 3
 #define PIN_ENCODER_PUSH 33
 #define VOL_ENC_L 28
