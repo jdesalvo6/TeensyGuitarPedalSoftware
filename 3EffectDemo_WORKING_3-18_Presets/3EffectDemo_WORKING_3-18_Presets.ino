@@ -8,7 +8,7 @@
 
 //screen defines
 #define TFT_DC      9
-#define TFT_CS      37
+#define TFT_CS      10
 #define TFT_RST    255  // 255 = unused, connect to 3.3V
 #define TFT_MOSI    11
 #define TFT_SCLK    13
