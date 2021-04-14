@@ -62,7 +62,8 @@ AudioControlSGTL5000     sgtl5000_1;
 AudioInputI2S            lineIn;         
 AudioEffectFreeverb      freeverbBlock;     
 AudioEffectFlange        flangeBlock;       
-AudioMixer4              mixFVOut;        
+AudioMixer4              mixFVOut;  
+AudioMixer4              bypassMixer;       
 AudioAmplifier           ampBlock;        
 AudioMixer4              outMix;        
 AudioOutputI2S           lineOut;     
@@ -75,7 +76,8 @@ AudioConnection          flangeOutCord(flangeBlock, 0, outMix, 2);
 AudioConnection          fvOutCord(mixFVOut, 0, outMix, 0);
 AudioConnection          distOutCord(ampBlock, 0, outMix, 1);
 AudioConnection          outputCord(outMix, 0, lineOut, 1);     
-AudioConnection          bypassCord(lineIn, 1, outMix, 3); //use this for bypass
+AudioConnection          bypassCord(lineIn, 1, bypassMixer, 3); //use this for bypass
+AudioConnection          bypassOut(bypassMixer, 0, outMix, 3);
 // GUItool: end automatically generated code
 
 void setup() 
@@ -95,7 +97,7 @@ void setup()
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
   distOutCord.disconnect(); //leave distortion on as default
-  //bypassCord.disconnect();
+  //bypassOut.disconnect();
 
   //encoder setup
   pinMode(PIN_ENCODER_L, INPUT_PULLUP);
@@ -130,7 +132,7 @@ void setup()
   freeverbBlock.roomsize(fvRoomSize);
   freeverbBlock.damping(fvDamp);
 
-  tft.println("4-8");
+  tft.println("4-8-21");
 }
 
 void loop() 
@@ -150,7 +152,7 @@ void Bypass() //disconnect all effects and just connect the dry in/out cord
         flangeOutCord.disconnect();
         fvOutCord.disconnect();
         distOutCord.disconnect();
-        bypassCord.connect();
+        bypassOut.connect();
         bypassOn = true;
         bypassSave[0] = flangeOn;
         bypassSave[1] = distOn;
@@ -160,7 +162,7 @@ void Bypass() //disconnect all effects and just connect the dry in/out cord
       else
       {
         tft.println("bypass off");
-        bypassCord.disconnect();
+        bypassOut.disconnect();
         bypassOn = false;
         if (bypassSave[0] == true)
           {
@@ -622,7 +624,7 @@ void saveLoader()
   flangeOutCord.disconnect();
   fvOutCord.disconnect();
   distOutCord.disconnect();
-  bypassCord.disconnect();
+  bypassOut.disconnect();
   
   tft.println("load which save?");
   while (Serial1.available()==0) {}
@@ -703,7 +705,7 @@ void BTBypass()
     flangeOutCord.disconnect();
     fvOutCord.disconnect();
     distOutCord.disconnect();
-    bypassCord.connect();
+    bypassOut.connect();
     bypassOn = true;
     bypassSave[0] = flangeOn;
     bypassSave[1] = distOn;
@@ -712,7 +714,7 @@ void BTBypass()
   else
   {
     tft.println("bypass turned off");
-    bypassCord.disconnect();
+    bypassOut.disconnect();
     bypassOn = false;
     if (bypassSave[0] == true)
     {
